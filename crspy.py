@@ -7,11 +7,23 @@ collection of python functions
 """
 from pylab import *
 from numpy.lib.scimath import *
+import os
+import platform
+   
+def crspy_loaded():
+    """
+    Quick way to verify this module is loaded.
+    
+    boolean = crspy_loaded()
+    """
+    print "crspy is accessible."
+    return True
 
 def fcat( fname, s, echo=True ):
     """
-    fcat( fname, s [, echo=True/False] )
     Append s to file fname
+    fcat( fname, s [, echo=True/False] )
+    
     if echo, also print to screen
     """
     fid = open( fname, 'a' )  
