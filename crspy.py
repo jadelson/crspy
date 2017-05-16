@@ -5,10 +5,9 @@ collection of python functions
 (c) 2104 christopher.robertson.sherwood@gmail.com
 
 """
-from pylab import *
-from numpy.lib.scimath import *
-import os
-import platform
+
+import numpy as np
+from scipy.optimize import fsolve
    
 def crspy_loaded():
     """
@@ -16,7 +15,7 @@ def crspy_loaded():
     
     boolean = crspy_loaded()
     """
-    print "crspy is accessible."
+    print("crspy is accessible.")
     return True
 
 def fcat( fname, s, echo=True ):
@@ -38,8 +37,8 @@ def pcoord(x, y):
     Convert x, y to polar coordinates r, az (geographic convention)
     r,az = pcoord(x, y)
     """
-    r  = sqrt( x**2 + y**2 )
-    az=degrees( arctan2(x, y) )
+    r  = np.sqrt( x**2 + y**2 )
+    az = np.degrees(np.arctan2(x, y) )
     # az[where(az<0.)[0]] += 360.
     az = (az+360.)%360.
     return r, az
@@ -49,8 +48,8 @@ def xycoord(r, az):
     Convert r, az [degrees, geographic convention] to rectangular coordinates
     x,y = xycoord(r, az)
     """
-    x = r * sin(radians(az))
-    y = r * cos(radians(az))
+    x = r * np.sin(np.radians(az))
+    y = r * np.cos(np.radians(az))
     return x, y
 
 def qkhfs( w, h ):
@@ -72,13 +71,13 @@ def qkhfs( w, h ):
     """
     g = 9.81
     x = w**2.0 *h/g
-    y = sqrt(x) * (x<1.) + x *(x>=1.)
+    y = np.sqrt(x) * (x<1.) + x *(x>=1.)
     # is this faster than a loop?
-    t = tanh( y )
+    t = np.tanh( y )
     y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
-    t = tanh( y )
+    t = np.tanh( y )
     y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
-    t = tanh( y )
+    t = np.tanh( y )
     y = y-( (y*t -x)/(t+y*(1.0-t**2.0)))
     kh = y
     return kh
@@ -90,7 +89,7 @@ def cwave( w, h):
     """
     g = 9.81
     kh = qkhfs( w, h )
-    c = g*w*tanh(kh)
+    c = g*w*np.tanh(kh)
     return c
 
 def fetch_limited( depth, fetch, u10 ):
@@ -115,11 +114,11 @@ def fetch_limited( depth, fetch, u10 ):
 
     fact1=0.53*(((g*depth)/uasq)**0.75)
     fact2=0.00565*(((g*fetch)/uasq)**0.50)
-    hs=(uasq*(0.283)*tanh(fact1)*tanh((fact2/tanh(fact1))))/g
+    hs=(uasq*(0.283)*np.tanh(fact1)*np.tanh((fact2/np.tanh(fact1))))/g
 
     fact3=0.833*(((g*depth)/uasq)**0.375)
     fact4=0.0379*(((g*fetch)/uasq)**0.333)
-    t=(ua*7.54*tanh(fact3)*tanh((fact4/tanh(fact3))))/g
+    t=(ua*7.54*np.tanh(fact3)*np.tanh((fact4/np.tanh(fact3))))/g
     return hs, t
 
 def earth_dist(lon1,lat1,lon2,lat2):
@@ -129,10 +128,10 @@ def earth_dist(lon1,lat1,lon2,lat2):
     Uses Haversine formula
     """
     radius = 6371.*1000.
-    dlat = radians(lat2-lat1)
-    dlon = radians(lon2-lon1)
-    a = sin(dlat/2.)**2 + cos(radians(lat1))*cos(radians(lat2))*sin(dlon/2.)**2.
-    d = 2.*radius*math.asin( sqrt(a) )
+    dlat = np.radians(lat2-lat1)
+    dlon = np.radians(lon2-lon1)
+    a = np.sin(dlat/2.)**2 + np.cos(np.radians(lat1))*np.cos(np.radians(lat2))*np.sin(dlon/2.)**2.
+    d = 2.*radius*np.arcsin( np.sqrt(a) )
     return d
 
 def rouseh(z,za,ws,ustr,h):
@@ -152,6 +151,7 @@ def rouse(z,za,ws,ustr):
     vk = 0.41 # von Karman's constant
     Cz = (za/z)**(-ws /(vk*ustr))
     return Cz
+    
     
 def m94( ubr, wr, ucr, zr, phiwc, kN, iverbose=False ):
     """
@@ -180,43 +180,37 @@ def m94( ubr, wr, ucr, zr, phiwc, kN, iverbose=False ):
     July 2005: Removed bug found by JCW and RPS
     March 2014: Ported from Matlab to Python
     """
-    MAXIT = 20
+
     vk = 0.41
-    rmu=zeros((MAXIT,1))
-    Cmu=zeros((MAXIT,1))
-    fwci=zeros((MAXIT,1))
-    dwci=zeros((MAXIT,1))
-    ustrwm2=zeros((MAXIT,1))
-    ustrr2=zeros((MAXIT,1))
-    ustrci=zeros((MAXIT,1))
 
     # ...junk return values
-    ustrc = 99.99
-    ustrwm = 99.99
-    ustrr = 99.99
-    fwc = .4
+    ustrc = np.nan
+    ustrwm = np.nan
+    ustrr = np.nan
+    fwc = np.nan
     zoa = kN/30.
     zoa = zoa
     dwc = kN
 
     # ...some data checks
     if( wr <= 0. ):
-        print 'WARNING: Bad value for frequency in M94: wr={0}\n'.format(wr)
-	return ustrc, ustrr, ustrwm, dwc, fwc, zoa
+        print('WARNING: Bad value for frequency in M94: wr={0}\n'.format(wr))
+        return ustrc, ustrr, ustrwm, dwc, fwc, zoa
 	
     if( ubr < 0. ):
-        print 'WARNING: Bad value for orbital vel. in M94: ub={0}\n'.format(ubr)
+        print('WARNING: Bad value for orbital vel. in M94: ub={0}\n'.format(ubr))
         return ustrc, ustrr, ustrwm, dwc, fwc, zoa
 
     if( kN < 0. ):
-	print 'WARNING: Weird value for roughness in M94: kN={0}\n'.format(kN)
+        print('WARNING: Weird value for roughness in M94: kN={0}\n'.format(kN))
         return ustrc, ustrr, ustrwm, dwc, fwc, zoa
 	
     if( (zr<zoa or zr<0.05) and iverbose == True):
-	print 'WARNING: Low value for ref. level in M94: zr={0}\n'.format(zr)	
+        print('WARNING: Low value for ref. level in M94: zr={0}\n'.format(zr))	
 
     zo = kN/30.
     if(ubr <= 0.01):
+        
         if(ucr <= 0.01):
             # ...no waves or currents
             ustrc = 0.
@@ -224,64 +218,64 @@ def m94( ubr, wr, ucr, zr, phiwc, kN, iverbose=False ):
             ustrr = 0.
             return ustrc, ustrr, ustrwm, dwc, fwc, zoa
         # ...no waves
-        ustrc = ucr * vk / log(zr/zo) 
+#        print('nowaves')
+        ustrc = ucr * vk / np.log(zr/zo) 
         ustrwm = 0.
         ustrr = ustrc
         return ustrc, ustrr, ustrwm, dwc, fwc, zoa
-  
-    cosphiwc =  abs(cos(phiwc))
-    rmu[0] = 0.
-    Cmu[0] = 1.
-    cukw = Cmu[0]*ubr/(kN*wr)
-    print Cmu[0], cukw
-    fwci[0] = fwc94( Cmu[0], cukw ) #Eqn. 32 or 33
-    ustrwm2[0]= 0.5*fwci[0]*ubr*ubr                 #Eqn. 29
-    ustrr2[0] = Cmu[0]*ustrwm2[0]                   #Eqn. 26
-    ustrr = sqrt( ustrr2[0] )
-    dwci[0] = kN
+    
+    cosphiwc =  np.abs(np.cos(phiwc))
+    rmu = 0.
+    Cmu = 1.
+    cukw = Cmu*ubr/(kN*wr)
+#    print(Cmu[0], cukw)
+    fwc = fwc94( Cmu, cukw ) #Eqn. 32 or 33
+    ustrwm2 = 0.5*fwc*ubr*ubr                 #Eqn. 29
+    ustrr2 = Cmu*ustrwm2                   #Eqn. 26
+    ustrr = np.sqrt( ustrr2 )
+    dwci = kN
     if (cukw >= 8.):
-        dwci[0]= 2.*vk*ustrr/wr
-    lnzr = log(zr/dwci[0])
-    lndw = log(dwci[0]/zo)
+        dwci= 2.*vk*ustrr/wr
+    lnzr = np.log(zr/dwc)
+    lndw = np.log(dwc/zo)
     lnln = lnzr/lndw
-    bigsqr = (-1.+sqrt(1+ ((4.*vk*lndw)/(lnzr*lnzr))*ucr/ustrr ))
-    ustrci[0] = 0.5*ustrr*lnln*bigsqr
-    nit = 1
+    bigsqr = (-1.+np.sqrt(1+ ((4.*vk*lndw)/(lnzr*lnzr))*ucr/ustrr ))
+    ustrc = 0.5*ustrr*lnln*bigsqr
 
-    for i in range(1,MAXIT):      
-        rmu[i] = ustrci[i-1]*ustrci[i-1]/ustrwm2[i-1]
-        Cmu[i] = sqrt(1.+2.*rmu[i]*cosphiwc+rmu[i]*rmu[i])#Eqn 27
-        cukw = Cmu[i]*ubr/(kN*wr)
-        fwci[i] = fwc94( Cmu[i], cukw )   #Eqn. 32 or 33
-        ustrwm2[i]= 0.5*fwci[i]*ubr*ubr                   #Eqn. 29
-        ustrr2[i] = Cmu[i]*ustrwm2[i]                     #Eqn. 26
-        ustrr = sqrt( ustrr2[i] )
-        dwci[i] = kN
-        if ((Cmu[i]*ubr/(kN*wr))>= 8.):
-            dwci[i]= 2.*vk*ustrr/wr #Eqn.36
-        lnzr = log( zr/dwci[i] )
-        lndw = log( dwci[i]/zo )
+    
+    def get_ustrs(_rmu):
+        Cmu = np.sqrt(1.+2.*rmu*cosphiwc+rmu*rmu)
+        cukw = Cmu*ubr/(kN*wr)
+        fwc = fwc94(Cmu, cukw)
+        ustrwm2 = 0.5*fwc*ubr*ubr
+        ustrwm = np.sqrt(ustrwm2)
+        ustrr2 = Cmu*ustrwm2
+        ustrr = np.sqrt( ustrr2 )
+        dwc = kN
+        if ((Cmu*ubr/(kN*wr))>= 8.):
+            dwc = 2.*vk*ustrr/wr #Eqn.36
+        lnzr = np.log( zr/dwci )    
+        lndw = np.log( dwci/zo )
         lnln = lnzr/lndw
-        bigsqr = (-1.+sqrt(1+ ((4.*vk*lndw)/(lnzr*lnzr))*ucr/ustrr ))
-        ustrci[i] = 0.5*ustrr*lnln*bigsqr                  #Eqn. 38
-        diffw = abs( (fwci[i]-fwci[i-1])/fwci[i] )
-        # print i,diffw
-        if(diffw < 0.0005):
-            break
-        nit = nit+1
-        ustrwm = sqrt( ustrwm2[nit] )
-        ustrc = ustrci[nit]
-        ustrr = sqrt( ustrr2[nit] )
+        bigsqr = (-1.+np.sqrt(1+ ((4.*vk*lndw)/(lnzr*lnzr))*ucr/ustrr ))
+        ustrc = 0.5*ustrr*lnln*bigsqr
+        return ustrc, ustrr, ustrwm, dwc, fwc
+    
+    def solve_gm(_rmu):
+        ustrc, ustrr, ustrwm, dwc, fwc = get_ustrs(_rmu)
+        return ustrc*ustrc/np.square(ustrwm) - _rmu
 
-    zoa = exp( log(dwci[nit])-(ustrc/ustrr)*log(dwci[nit]/zo) ) #Eqn. 11
-    fwc = fwci[nit]
-    dwc = dwci[nit]
-    if(iverbose==True):
-        print "M94 nit=",nit
-        for i in range(nit):
-            print \
-	    'i={0} fwc={1} dwc={2} u*c={3} u*wm={4} u*r={5}'\
-	    .format(i,fwci[i],dwci[i],ustrci[i],sqrt(ustrwm2[i]),sqrt(ustrr2[i]))
+    rmu = fsolve(solve_gm, ustrc*ustrc/ustrwm2)[0]
+    ustrc, ustrr, ustrwm, dwc, fwc = get_ustrs(rmu)
+    
+    
+    zoa = np.exp( np.log(dwc)-(ustrc/ustrr)*np.log(dwc/zo) ) #Eqn. 11
+
+#    if(iverbose==True):
+#        print("M94 nit=",nit)
+#        for i in range(nit):
+#            print('i={0} fwc={1} dwc={2} u*c={3} u*wm={4} u*r={5}'\
+#	    .format(i,fwci[i],dwci[i],ustrci[i],np.sqrt(ustrwm2[i]),np.sqrt(ustrr2[i])))
 
     return ustrc, ustrr, ustrwm, dwc, fwc, zoa
 
@@ -294,20 +288,21 @@ def fwc94( cmu, cukw ):
  
     csherwood@usgs.gov 4 March 2014
     """
-    fwc = 0.00999 #meaningless (small) return value
+
+    fwc = np.nan #meaningless (small) return value
     if( cukw <= 0. ):
-        print 'ERROR: cukw too small in fwc94: {0}\n'.format( cukw )
+        print('ERROR: Cmu*ubr/(kN*wr) too small in fwc94: {0}\n'.format( cukw ))
         return fwc
     
     if( cukw < 0.2 ):
-        fwc = exp( 7.02*0.2**(-0.078) - 8.82 )
-        print 'WARNING: cukw very small in fwc94: {0}\n'.format( cukw )
+        fwc = np.exp( 7.02*0.2**(-0.078) - 8.82 )
+        print('WARNING: Cmu*ubr/(kN*wr) very small in fwc94: {0}\n'.format( cukw ))
     if( (cukw >= 0.2) and (cukw <= 100.) ):
-        fwc = cmu*exp( 7.02*cukw**(-0.078)-8.82 )
+        fwc = cmu*np.exp( 7.02*cukw**(-0.078)-8.82 )
     elif( (cukw > 100.) and (cukw <= 10000.) ):
-        fwc = cmu*exp( 5.61*cukw**(-0.109)-7.30 )
+        fwc = cmu*np.exp( 5.61*cukw**(-0.109)-7.30 )
     elif( cukw > 10000.):
-        fwc = cmu*exp( 5.61*10000.**(-0.109)-7.30 )
-        print 'WARNING: cukw very large in fwc94: {0}\n'.format(cukw)
+        fwc = cmu*np.exp( 5.61*10000.**(-0.109)-7.30 )
+        print('WARNING: Cmu*ubr/(kN*wr) very large in fwc94: {0}\n'.format(cukw))
 
     return fwc
